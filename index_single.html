@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RFID Smart Access | Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at top left, #1e1b4b, #0f172a);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem;
+            overflow-x: hidden;
+        }
+
+        .dashboard {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            transition: transform 0.3s ease;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th {
+            text-align: left;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        td {
+            padding: 1rem 0;
+            font-size: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: #818cf8;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-valid { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+        .status-unknown { background: rgba(248, 113, 113, 0.2); color: #f87171; }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+
+        /* Modal Styling */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background: #1e293b;
+            padding: 2rem;
+            border-radius: 1rem;
+            width: 400px;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem;
+            margin: 1rem 0;
+            background: #0f172a;
+            border: 1px solid var(--glass-border);
+            color: white;
+            border-radius: 0.5rem;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        tr { animation: fadeIn 0.4s ease forwards; }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <header>
+            <div class="logo">
+                <h1>RFID Access System</h1>
+                <p style="color: var(--text-muted); font-size: 0.875rem;">Quản lý và giám sát thời gian thực</p>
+            </div>
+            <button class="btn" onclick="openAssignModal()">Gán người dùng mới</button>
+        </header>
+
+        <main class="glass-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>THỜI GIAN</th>
+                        <th>NGƯỜI DÙNG</th>
+                        <th>UID THẺ</th>
+                        <th>TRẠNG THÁI</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body">
+                    <!-- Data injected here -->
+                </tbody>
+            </table>
+        </main>
+    </div>
+
+    <!-- Modal assign user -->
+    <div id="assignModal" class="modal">
+        <div class="modal-content glass-card">
+            <h2>Gán Người Dùng</h2>
+            <p style="color: var(--text-muted); margin-top: 0.5rem;">Liên kết UID thẻ với tên nhân viên</p>
+            <input type="text" id="assign-uid" placeholder="UID thẻ (ví dụ: ABC12345)">
+            <input type="text" id="assign-name" placeholder="Tên người dùng">
+            <div style="display: flex; gap: 1rem;">
+                <button class="btn" onclick="saveAssignment()" style="flex: 1;">Lưu</button>
+                <button class="btn" onclick="closeAssignModal()" style="flex: 1; background: #475569;">Hủy</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tự động sử dụng IP của PC nếu mở file trực tiếp
+        const API_BASE = window.location.protocol === 'file:' ? 'http://192.168.100.231:3000' : '';
+
+        async function fetchHistory() {
+            try {
+                const response = await fetch(`${API_BASE}/api/history`);
+                const data = await response.json();
+                const tbody = document.getElementById('history-body');
+                tbody.innerHTML = data.map(scan => `
+                    <tr>
+                        <td style="color: var(--text-muted)">${new Date(scan.timestamp).toLocaleString('vi-VN')}</td>
+                        <td class="user-name">${scan.name || 'Khách lạ'}</td>
+                        <td><code>${scan.uid}</code></td>
+                        <td>
+                            <span class="status-badge ${scan.name ? 'status-valid' : 'status-unknown'}">
+                                ${scan.name ? 'Hợp lệ' : 'Không xác định'}
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error("Lỗi lấy dữ liệu:", err);
+            }
+        }
+
+        function openAssignModal() {
+            document.getElementById('assignModal').style.display = 'flex';
+        }
+
+        function closeAssignModal() {
+            document.getElementById('assignModal').style.display = 'none';
+        }
+
+        async function saveAssignment() {
+            const uid = document.getElementById('assign-uid').value;
+            const name = document.getElementById('assign-name').value;
+            if(!uid || !name) return alert("Vui lòng nhập đủ!");
+
+            await fetch(`${API_BASE}/api/assign-user`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ uid, name })
+            });
+
+            closeAssignModal();
+            fetchHistory();
+        }
+
+        // Auto refresh
+        setInterval(fetchHistory, 3000);
+        fetchHistory();
+    </script>
+</body>
+</html>
